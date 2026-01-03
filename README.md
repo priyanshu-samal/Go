@@ -4,11 +4,12 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 
 ## Index
 
-*   [**Chapter 1: Intro**](./Intro) - A basic HTTP server implementation using the standard library.
+*   [**Chapter 0: Intro**](./Intro) - Standard project structure, modules, and packages.
+*   [**Chapter 1: The Runtime**](#chapter-1-the-runtime) - Deep dive into Stack vs Heap, GC, sync.Pool, and Profiling.
 
 ---
 
-## Chapter 1: Intro
+## Chapter 0: Intro
 
 ### Overview
 The **Intro** project is a practical guide to setting up a "proper" Go workspace. Rather than just writing a single `main.go` file, this project demonstrates the **standard project layout** preferred by the Go community. It covers how to initialize a module, organize code into packages, and structure your folders for scalability.
@@ -41,7 +42,7 @@ graph TD
 ### Code & Structure Walkthrough
 
 #### 1. The Module Definition (`go.mod`)
-Created by running `go mod init github.com/priyanshu-samal/intro`. This file marks the root of the project and tracks the Go version (e.g., `go 1.22.5`).
+Created by running `go mod init github.com/priyanshu-samal/intro`. This file marks the root of the project and tracks the Go version (e.g., `go 1.25.5`).
 
 #### 2. The Entry Point (`cmd/intro/main.go`)
 This is the "face" of the application. It belongs to `package main`, which tells the Go compiler that this file should compile into an executable program.
@@ -71,6 +72,75 @@ func NewRouter() *http.ServeMux {
 ### How Wait Works
 *   **Running**: When you run `go run cmd/intro/main.go`, Go compiles the `main` package and links it with the imported `routes` package.
 *   **Building**: Running `go build -o bin/intro.exe ./cmd/intro` would create a binary in a `bin` folder.
+
+---
+
+## Chapter 1: The Runtime
+
+### Overview
+Before writing more code, it is critical to understand **how Go actually executes it**. This chapter covers the hidden mechanisms of the Go runtime: memory management, the garbage collector, and performance tuning. Understanding these concepts transforms you from writing "random Go code" to writing code that cooperates with the runtime.
+
+### 1. Stack vs Heap (Escape Analysis)
+Imagine every function in Go is a **small room**. When you create a variable, Go has to decide:
+> *"Can this thing stay inside the room, or do I need to put it outside where everyone can reach it?"*
+
+*   **Stack (The Room)**: If Go is 100% sure the variable is used *only* inside that room, it keeps it on the stack. When you leave the room (function returns), it’s gone. Fast and clean.
+*   **Heap (The Outside)**: If Go is not sure—even a little bit unsure—it moves the variable to the heap so it doesn’t disappear too early.
+
+**Escape Analysis** is Go thinking very carefully before running your program.
+To see this decision process in action, run:
+```bash
+go build -gcflags="-m"
+```
+Go will literally tell you what it decided and why. If you don’t look at that output, you’re guessing.
+
+### 2. Garbage Collector (GC)
+Now imagine the **Heap** is a **playground**.
+*   **Objects**: Kids running around.
+*   **Garbage**: Forgotten toys lying around.
+
+The **Garbage Collector** is a cleaning robot that walks around while kids are still playing. It checks:
+> *"Is anyone still holding this toy?"*
+*   **Yes** → Leave it.
+*   **No** → Pick it up and throw it away.
+
+This robot works while your program is running (concurrently), but sometimes it says *"Everyone freeze for a moment"* (Stop-The-World) to do a quick check.
+**The Cost**: The robot gets tired if you keep throwing new toys on the ground every second. Lots of tiny heap allocations slow programs down, even if memory looks "free".
+
+### 3. sync.Pool
+Imagine instead of throwing toys away, you have a **shared toy box**. When a kid finishes playing with a toy, they put it back in the box instead of throwing it away. The next kid reuses it.
+
+**sync.Pool is NOT a Cache**
+A cache is like a fridge: you put food in and expect it to be there later. `sync.Pool` is a **Recycling Bin**.
+*   You throw something in, maybe someone reuses it.
+*   **But**: The cleaning robot (GC) is allowed to empty the bin whenever it wants.
+
+**The Golden Rule**: Your program must behave exactly the same if the pool were always empty.
+*   **Good Usage**: Temporary buffers, encoding/decoding scratch space.
+*   **Bad Usage**: Database connections, user sessions, configuration.
+
+### 4. unsafe
+Normally, Go acts like a strict parent, checking types and memory to make sure you don't hurt yourself.
+**unsafe** is Go saying:
+> *"Fine. You know what you’re doing. I won’t stop you."*
+
+Using `unsafe` is like giving scissors to a kid. You can do useful things (like direct memory manipulation for performance), but one wrong move can silently corrupt your program in ways you won't notice until much later.
+
+### 5. pprof
+Finally, imagine your program is a city, and it feels slow. You *think* traffic is the problem, but you're guessing.
+**pprof** is a helicopter camera. It shows you:
+*   Where time is *actually* being spent.
+*   Where memory is *actually* being allocated.
+
+Without pprof, performance tuning is just "vibes". With it, you can pinpoint the exact line causing 90% of the garbage.
+
+### Summary: The Unified Theory
+Go is constantly trying to keep things simple, fast, and safe:
+1.  **Escape Analysis** decides where things live.
+2.  **Heap Objects** create work for the GC.
+3.  **sync.Pool** reduces how often garbage is created.
+4.  **unsafe** lets you break rules when you must.
+5.  **pprof** tells you the truth when intuition lies.
 
 ---
 *Happy Coding!*
