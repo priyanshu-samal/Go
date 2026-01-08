@@ -7,6 +7,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 0: Intro**](./Intro) - Standard project structure, modules, and packages.
 *   [**Chapter 1: The Runtime**](#chapter-1-the-runtime) - Deep dive into Stack vs Heap, GC, sync.Pool, and Profiling.
 *   [**Chapter 2: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
+*   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
 
 ---
 
@@ -210,4 +211,67 @@ go run main.go
 ```
 
 ---
+
+## Chapter 3: Concurrency
+
+### Overview
+Concurrency is Go's superpower. Unlike OS threads which are heavy (1MB+ stack), Go uses **Goroutines** (2KB stack). A single Go program can easily run tens of thousands of concurrent tasks.
+
+This chapter implements a **Worker Pool**. Instead of spawning a new goroutine for every single job (which can crash a system under load), we start a fixed number of workers that pick jobs from a queue.
+
+### Core Components
+
+1.  **Goroutine (`go func()`)**: A lightweight thread of execution.
+2.  **Channel (`make(chan T)`)**: A pipe that connects concurrent goroutines. You send values into one end and receive from the other.
+3.  **WaitGroup (`sync.WaitGroup`)**: A counter to wait for a collection of goroutines to finish.
+
+### Design Pattern: Worker Pool (Fan-Out / Fan-In)
+
+We use a **Fan-Out** pattern to distribute work and a **Fan-In** (or simple collection) to gather results.
+
+```mermaid
+flowchart LR
+    Jobs[Job Queue (Channel)] -->|Pull| W1[Worker 1]
+    Jobs -->|Pull| W2[Worker 2]
+    Jobs -->|Pull| W3[Worker 3]
+    
+    W1 -->|Push| Results[Result Queue (Channel)]
+    W2 -->|Push| Results
+    W3 -->|Push| Results
+    
+    style Jobs fill:#e1f5fe,stroke:#01579b
+    style Results fill:#e1f5fe,stroke:#01579b
+    style W1 fill:#fff9c4,stroke:#fbc02d
+```
+
+### Code Walkthrough (`concurrency/main.go`)
+
+**1. The Worker**
+```go
+func worker(wg *sync.WaitGroup, resultChan chan string, jobsChan chan string) {
+    defer wg.Done() // Signal completion when function exits
+    for url := range jobsChan { // Automatically stops when channel is closed
+        // ... process job ...
+        resultChan <- "Fetched " + url
+    }
+}
+```
+
+**2. The Orchestrator (main)**
+*   **Channels**: We create buffered channels for `jobs` and `results`.
+*   **Spawning**: We loop `totalWorkers` times to start the worker goroutines.
+*   **Dispatching**: We push data into `jobsChan` and immediately `close` it. This tells workers "No more work coming".
+*   **Waiting**: We run `wg.Wait()` in a *separate goroutine* so that the main thread can proceed to read results.
+
+### Deep Dive: Why close `resultChan` in a goroutine?
+```go
+go func() {
+    wg.Wait()
+    close(resultChan)
+}()
+```
+If we waited in the main thread *before* reading the results, the program might **deadlock** if the result channel fills up (since workers would be blocked trying to write to a full channel, and main is blocked waiting for workers). By waiting asynchronously, we allow `main` to start consuming results immediately.
+
+---
 *Happy Coding!*
+
