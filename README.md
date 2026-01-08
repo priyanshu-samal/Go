@@ -6,6 +6,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 
 *   [**Chapter 0: Intro**](./Intro) - Standard project structure, modules, and packages.
 *   [**Chapter 1: The Runtime**](#chapter-1-the-runtime) - Deep dive into Stack vs Heap, GC, sync.Pool, and Profiling.
+*   [**Chapter 2: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
 
 ---
 
@@ -141,6 +142,72 @@ Go is constantly trying to keep things simple, fast, and safe:
 3.  **sync.Pool** reduces how often garbage is created.
 4.  **unsafe** lets you break rules when you must.
 5.  **pprof** tells you the truth when intuition lies.
+
+---
+
+## Chapter 2: Error Handling
+
+### Overview
+In many languages (Java, Python, JS), errors are "exceptions" — they crash the program unless you catch them.
+In Go, **Errors are Values**. They are just like `int` or `string`. You don't "throw" them; you pass them around.
+
+This philosophy forces you to handle failure cases explicitly where they happen, rather than letting them bubble up and crash your app unexpectedly.
+
+### Key Concepts
+
+#### 1. Sentinel Errors (`errors.Is`)
+Think of these as "Error Constants".
+*   Example: `var ErrNotFound = errors.New("not found")`
+*   Usage: You check for them with `==` (or better, `errors.Is`).
+*   Analogy: Checking a specific return code.
+
+#### 2. Custom Error Types (`errors.As`)
+Sometimes a simple string isn't enough. You need data: "Which URL failed?", "How many retries?".
+*   We define a struct that implements the `error` interface.
+*   Usage: usage of `errors.As` allows us to "unwrap" the error and see the fields inside the struct.
+
+### Flow Comparison
+
+**Exception Model (Other Languages)**
+```mermaid
+flowchart LR
+    Func[Function] -->|Throw Exception| Catch[Catch Block]
+    Func -.->|Skip Code| End
+    style Catch fill:#ffccbc,stroke:#bf360c
+```
+
+**Go Model (Errors as Values)**
+```mermaid
+flowchart LR
+    Func[Function] -->|Return Value + Error| Check{Err != nil?}
+    Check -->|Yes| Handle[Handle Error]
+    Check -->|No| Continue[Continue Logic]
+    style Handle fill:#c8e6c9,stroke:#2e7d32
+```
+
+### Code Walkthrough (`errorhandling/main.go`)
+
+**Checking for specific errors**
+```go
+if errors.Is(err, ErrNotFound) {
+    // "Is this specific error the one we got?"
+}
+```
+
+**Extracting data from errors**
+```go
+var connErr *ConnectionError
+if errors.As(err, &connErr) {
+    // "Treat this error as a ConnectionError and give me access to .URL"
+    fmt.Printf("Failed URL: %s", connErr.URL)
+}
+```
+
+### How to Run
+```bash
+cd errorhandling
+go run main.go
+```
 
 ---
 *Happy Coding!*
