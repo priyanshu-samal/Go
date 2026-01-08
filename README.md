@@ -231,11 +231,11 @@ We use a **Fan-Out** pattern to distribute work and a **Fan-In** (or simple coll
 
 ```mermaid
 flowchart LR
-    Jobs[Job Queue (Channel)] -->|Pull| W1[Worker 1]
+    Jobs["Job Queue (Channel)"] -->|Pull| W1[Worker 1]
     Jobs -->|Pull| W2[Worker 2]
     Jobs -->|Pull| W3[Worker 3]
     
-    W1 -->|Push| Results[Result Queue (Channel)]
+    W1 -->|Push| Results["Result Queue (Channel)"]
     W2 -->|Push| Results
     W3 -->|Push| Results
     
