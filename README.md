@@ -8,6 +8,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 1: The Runtime**](#chapter-1-the-runtime) - Deep dive into Stack vs Heap, GC, sync.Pool, and Profiling.
 *   [**Chapter 2: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
 *   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
+*   [**Chapter 4: CRUD API**](./CRUD) - RESTful API with `gorilla/mux`.
 
 ---
 
@@ -273,5 +274,73 @@ go func() {
 If we waited in the main thread *before* reading the results, the program might **deadlock** if the result channel fills up (since workers would be blocked trying to write to a full channel, and main is blocked waiting for workers). By waiting asynchronously, we allow `main` to start consuming results immediately.
 
 ---
-*Happy Coding!*
 
+## Chapter 4: CRUD API
+
+### Overview
+This project builds a fully functional **RESTful API** for managing a collection of Movies. It uses the external library **Gorilla Mux** for robust routing, which offers more features than the standard `net/http` ServeMux (like parameters extraction).
+
+### Data Model
+We use a simple in-memory slice to store data.
+
+```go
+type Movie struct{
+    ID       string    `json:"id"`
+    Isbn     string    `json:"isbn"`
+    Title    string    `json:"title"`
+    Director *Director `json:"director"`
+}
+
+type Director struct{
+    Firstname string `json:"firstname"`
+    Lastname  string `json:"lastname"`
+}
+```
+> [!NOTE]
+> In Go, fields must be **Exported** (Capitalized) to be visible to the `encoding/json` package. If you name them `firstname` (lowercase), they will be ignored in the JSON output!
+
+### Design: REST Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/movies` | Get all movies |
+| **GET** | `/movies/{id}` | Get a specific movie by ID |
+| **POST** | `/movies` | Create a new movie |
+| **PUT** | `/movies/{id}` | Update an existing movie |
+| **DELETE** | `/movies/{id}` | Delete a movie |
+
+### Code Walkthrough (`CRUD/main.go`)
+
+**1. The Router (`gorilla/mux`)**
+Unlike standard Http, Mux allows dynamic variables in URLs:
+```go
+r := mux.NewRouter()
+r.HandleFunc("/movies/{id}", getMovie).Methods("GET")
+```
+
+**2. Handling Request Body (POST/PUT)**
+We use `json.NewDecoder` to read data directly from the input stream into our struct.
+```go
+var movie Movie
+_ = json.NewDecoder(r.Body).Decode(&movie)
+movies = append(movies, movie)
+```
+
+**3. Handling Route Parameters**
+To get `{id}` from the URL:
+```go
+params := mux.Vars(r)
+id := params["id"]
+```
+
+### How to Run
+```bash
+cd CRUD
+go mod tidy  # Install dependencies
+go run main.go
+```
+*   Server listens on `http://localhost:8000`.
+*   Use Postman or `curl` to test the API.
+
+---
+*Happy Coding!*
