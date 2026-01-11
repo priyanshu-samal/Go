@@ -2,60 +2,63 @@ package main
 
 import (
 	"context"
-	
-	"log"
+	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/priyanshu-samal/student/internal/config"
-
-	"net/http"
 )
-func main() {
 
+func main() {
 	cfg := config.MustLoad()
 
-	router:=http.NewServeMux()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request){
-		w.Write([]byte("Welcome"))
-	}) 
+	router := http.NewServeMux()
+	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("Welcome"))
+	})
 
-
-	server:=http.Server{
-		Addr:cfg.Addr,
+	server := &http.Server{
+		Addr:    cfg.Addr,
 		Handler: router,
-
 	}
 
-    slog.Info("Server started %s", slog.String("adress", cfg.Addr))
-    
+	go startServer(server)
 
-    done:= make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	waitForShutdown(server)
+}
 
-    go func (){
-		err:=server.ListenAndServe()
-	if err!=nil{
-		log.Fatal("Failed to start server")
+func startServer(server *http.Server) {
+	slog.Info("HTTP server starting", slog.String("addr", server.Addr))
+
+	err := server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("HTTP server failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	}()
+}
 
-    <-done
-	slog.Info("Shutting down server")
-    ctx, cancel:=	context.WithTimeout(context.Background(), 5*time.Second)
-	
-    defer cancel()
+func waitForShutdown(server *http.Server) {
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdown
 
-	err:=server.Shutdown(ctx)
+	slog.Info("Shutdown signal received")
 
-	if err !=nil {
-		slog.Error("Failed to Shutdown", slog.String("error", err.Error()))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("Graceful shutdown failed", slog.String("error", err.Error()))
+		return
 	}
-   
-   slog.Info("Server shutdown successfully")
-	
+
+	slog.Info("Server shut down cleanly")
 }

@@ -9,6 +9,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 2: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
 *   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
 *   [**Chapter 4: CRUD API**](./CRUD) - RESTful API with `gorilla/mux`.
+*   [**Chapter 5: Standard Project Structure**](./student) - Graceful shutdown, `slog`, and folder layout.
 
 ---
 
@@ -343,4 +344,64 @@ go run main.go
 *   Use Postman or `curl` to test the API.
 
 ---
+
+## Chapter 5: Standard Project Structure
+
+### Overview
+This project (`student/`) demonstrates how to structure a production-ready Go application. It moves away from "everything in main" to a modular design and implements **Graceful Shutdown** to ensure no requests are dropped when the server stops.
+
+### 1. The Layout
+We follow the unofficial standard Go project layout:
+
+```text
+student/
+├── cmd/
+│   └── student/
+│       └── main.go      # Entry point. Connects components.
+├── internal/
+│   ├── config/          # Configuration loading
+│   └── storage/         # Database logic (private to this app)
+├── go.mod               # Dependencies
+└── .gitignore           # Git ignore rules
+```
+
+*   **`cmd/`**: Main applications. You might have `cmd/server` and `cmd/cli`.
+*   **`internal/`**: Code that libraries cannot import. This enforces that your app's business logic stays private.
+
+### 2. Graceful Shutdown
+In production, you never want to `kill -9` a server. You want to stop receiving new requests, finish the current ones, and *then* exit.
+
+**The Implementation (`cmd/student/main.go`)**
+
+1.  **Start Background Server**:
+    We run `ListenAndServe` in a goroutine so it doesn't block the main thread.
+    ```go
+    go startServer(server)
+    ```
+
+2.  **Listen for OS Signals**:
+    We block until we get a termination signal (like Ctrl+C or Docker stopping).
+    ```go
+    shutdown := make(chan os.Signal, 1)
+    signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+    <-shutdown // Block here until signal received
+    ```
+
+3.  **Timeout Context**:
+    We give the server 5 seconds to finish active requests. If it takes longer, we force kill it.
+    ```go
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+    server.Shutdown(ctx)
+    ```
+
+### 3. Structured Logging (`log/slog`)
+We use Go's new built-in structured logger.
+```go
+slog.Info("HTTP server starting", slog.String("addr", server.Addr))
+```
+This outputs JSON logs (e.g., `{"time":"...", "level":"INFO", "msg":"...", "addr":":8080"}`), which are machine-readable and perfect for tools like Datadog or Grafana.
+
+---
 *Happy Coding!*
+
