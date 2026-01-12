@@ -1,15 +1,16 @@
 package app
 
 import (
-	"log"
 	"net/http"
 
 	internalhttp "github.com/priyanshu-samal/miniauth/internal/http"
 )
 
-func Start() {
+func NewServer() *http.Server {
 	router := internalhttp.NewRouter()
 
-	log.Println("Server running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	return &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
 }

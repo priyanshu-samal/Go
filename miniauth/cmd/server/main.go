@@ -3,32 +3,24 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	internalhttp "github.com/priyanshu-samal/miniauth/internal/http"
+	"github.com/priyanshu-samal/miniauth/internal/app"
 )
 
 func main() {
-	router := internalhttp.NewRouter()
+	server := app.NewServer()
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	// run server
 	go func() {
 		log.Println("server started on :8080")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %v", err)
+		if err := server.ListenAndServe(); err != nil {
+			log.Println(err)
 		}
 	}()
 
-	// wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -38,9 +30,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("server forced to shutdown: %v", err)
-	}
-
-	log.Println("server exited properly")
+	server.Shutdown(ctx)
+	log.Println("server stopped")
 }

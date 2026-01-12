@@ -10,6 +10,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
 *   [**Chapter 4: CRUD API**](./CRUD) - RESTful API with `gorilla/mux`.
 *   [**Chapter 5: Standard Project Structure**](./student) - Graceful shutdown, `slog`, and folder layout.
+*   [**Chapter 6: MiniAuth**](./miniauth) - JWT Authentication from scratch.
 
 ---
 
@@ -403,5 +404,93 @@ slog.Info("HTTP server starting", slog.String("addr", server.Addr))
 This outputs JSON logs (e.g., `{"time":"...", "level":"INFO", "msg":"...", "addr":":8080"}`), which are machine-readable and perfect for tools like Datadog or Grafana.
 
 ---
+
+## Chapter 6: MiniAuth
+
+### Overview
+**MiniAuth** is a monolithic Go server that demonstrates **JWT Authentication** from scratch, without external frameworks or databases. It serves HTML, handles Signup/Login, and protects routes using Middleware.
+
+**Key Features:**
+*   **Zero Dependencies** (mostly): Uses standard `net/http` for routing.
+*   **JWT Sessions**: Stateless authentication stored in HTTP-only cookies.
+*   **Middleware**: Explicit protection wrapper for sensitive routes (`/dashboard`).
+*   **Single Binary**: Serves both API and Frontend (`frontend/` folder).
+
+### Authentication Flow
+The following diagram shows how a user gets access to the Dashboard:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Server
+    participant Handler
+    participant Middleware
+
+    User->>Server: POST /login (name, password)
+    Server->>Handler: Validate Credentials
+    Handler->>Handler: Generate JWT
+    Handler-->>User: Set-Cookie: token=...
+    
+    User->>Server: GET /dashboard
+    Server->>Middleware: Check Cookie (token)
+    Middleware->>Middleware: Verify JWT Signature
+    Middleware->>Handler: Serve Dashboard
+    Handler-->>User: dashboard.html
+```
+
+### Code Walkthrough
+
+#### 1. Middleware (`internal/http/middleware.go`)
+In Go, middleware is just a function that wraps a Handler.
+```go
+func AuthMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // 1. Check Cookie
+        cookie, err := r.Cookie("token")
+        if err != nil {
+            http.Redirect(w, r, "/login", http.StatusFound)
+            return
+        }
+        // 2. Validate JWT
+        if err := auth.VerifyToken(cookie.Value); err != nil {
+            http.Redirect(w, r, "/login", http.StatusFound)
+            return
+        }
+        // 3. Pass to next handler
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+#### 2. Project Composition (`internal/app/app.go`)
+We avoid "Magic" globals. The `NewServer` function composes the application by wiring the router to the server.
+```go
+func NewServer() *http.Server {
+    router := internalhttp.NewRouter()
+    return &http.Server{
+        Addr:    ":8080",
+        Handler: router,
+    }
+}
+```
+
+#### 3. Serving Static Files
+Go acts as the web server, serving raw HTML from the `frontend/` directory directly.
+```go
+http.ServeFile(w, r, "frontend/signup.html")
+```
+This eliminates the need for a separate Nginx or Node.js server for simple apps.
+
+### How to Run
+```bash
+cd miniauth
+go mod tidy
+go run cmd/server/main.go
+```
+*   Visit `http://localhost:8080/signup` to create a user.
+*   Log in to access the protected dashboard.
+
+---
 *Happy Coding!*
+
 
