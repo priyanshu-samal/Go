@@ -414,7 +414,7 @@ This outputs JSON logs (e.g., `{"time":"...", "level":"INFO", "msg":"...", "addr
 *   **Zero Dependencies** (mostly): Uses standard `net/http` for routing.
 *   **JWT Sessions**: Stateless authentication stored in HTTP-only cookies.
 *   **Middleware**: Explicit protection wrapper for sensitive routes (`/dashboard`).
-*   **Single Binary**: Serves both API and Frontend (`frontend/` folder).
+*   **Single Binary**: Serves both API and Frontend (`web/` folder).
 
 ### Authentication Flow
 The following diagram shows how a user gets access to the Dashboard:
@@ -475,9 +475,9 @@ func NewServer() *http.Server {
 ```
 
 #### 3. Serving Static Files
-Go acts as the web server, serving raw HTML from the `frontend/` directory directly.
+Go acts as the web server, serving raw HTML from the `web/` directory directly.
 ```go
-http.ServeFile(w, r, "frontend/signup.html")
+http.ServeFile(w, r, "web/signup.html")
 ```
 This eliminates the need for a separate Nginx or Node.js server for simple apps.
 

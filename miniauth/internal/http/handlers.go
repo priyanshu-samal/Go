@@ -5,12 +5,46 @@ import (
 	"net/http"
 
 	"github.com/priyanshu-samal/miniauth/internal/auth"
-
 )
 
-var users = map[string]string{} // name → hashed password
+var users = map[string]string{} // name -> password hash
+
+// ---------- PAGES (GET only) ----------
+
+func SignupPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	http.ServeFile(w, r, "web/signup.html")
+}
+
+func LoginPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	http.ServeFile(w, r, "web/login.html")
+}
+
+func DashboardPage() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		http.ServeFile(w, r, "web/dashboard.html")
+	})
+}
+
+// ---------- API (POST only) ----------
 
 func SignupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	name := r.FormValue("name")
 	password := r.FormValue("password")
 
@@ -26,6 +60,11 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	name := r.FormValue("name")
 	password := r.FormValue("password")
 
@@ -49,18 +88,4 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
-}
-
-func SignupPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "frontend/signup.html")
-}
-
-func LoginPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "frontend/login.html")
-}
-
-func DashboardPage() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "frontend/dashboard.html")
-	})
 }
