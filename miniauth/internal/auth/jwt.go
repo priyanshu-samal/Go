@@ -1,12 +1,26 @@
 package auth
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"time"
 
-func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	return string(hash), err
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var secret = []byte("super_secret_key")
+
+func GenerateToken(email string) (string, error) {
+	claims := jwt.MapClaims{
+		"email": email,
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secret)
 }
 
-func CheckPassword(hash, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+func VerifyToken(tokenStr string) error {
+	_, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		return secret, nil
+	})
+	return err
 }
