@@ -408,82 +408,100 @@ This outputs JSON logs (e.g., `{"time":"...", "level":"INFO", "msg":"...", "addr
 ## Chapter 6: MiniAuth
 
 ### Overview
-**MiniAuth** is a monolithic Go server that demonstrates **JWT Authentication** from scratch, without external frameworks or databases. It serves HTML, handles Signup/Login, and protects routes using Middleware.
+**MiniAuth** is a monolithic Go server that demonstrates **production-grade authentication** flow.
+Unlike simple tutorials, this project implements **Clean Architecture** (Service/Repository pattern) and connects to a real **MongoDB** database.
 
 **Key Features:**
-*   **Zero Dependencies** (mostly): Uses standard `net/http` for routing.
+*   **Clean Architecture**: Separation of concerns (Handler → Service → Repository → DB).
+*   **Dependency Injection**: Dependencies are passed explicitly, making the code testable and clear.
 *   **JWT Sessions**: Stateless authentication stored in HTTP-only cookies.
-*   **Middleware**: Explicit protection wrapper for sensitive routes (`/dashboard`).
-*   **Single Binary**: Serves both API and Frontend (`web/` folder).
+*   **MongoDB**: Persistent user storage using `mongo-driver`.
 
-### Authentication Flow
-The following diagram shows how a user gets access to the Dashboard:
+### Architecture Layers
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant Server
-    participant Handler
-    participant Middleware
-
-    User->>Server: POST /login (name, password)
-    Server->>Handler: Validate Credentials
-    Handler->>Handler: Generate JWT
-    Handler-->>User: Set-Cookie: token=...
+graph TD
+    Router[Router] -->|Injects Service| Handler[HTTP Handlers]
+    Handler -->|Calls| Service[Auth Service]
+    Service -->|Calls| Repo[User Repository]
+    Repo -->|Queries| DB[(MongoDB)]
     
-    User->>Server: GET /dashboard
-    Server->>Middleware: Check Cookie (token)
-    Middleware->>Middleware: Verify JWT Signature
-    Middleware->>Handler: Serve Dashboard
-    Handler-->>User: dashboard.html
+    style Handler fill:#fff9c4,stroke:#fbc02d
+    style Service fill:#e1f5fe,stroke:#01579b
+    style Repo fill:#e0f2f1,stroke:#00695c
 ```
 
 ### Code Walkthrough
 
-#### 1. Middleware (`internal/http/middleware.go`)
-In Go, middleware is just a function that wraps a Handler.
+#### 1. Wiring Dependencies (`internal/http/routes.go`)
+We avoid global state by wiring our application in the composition root (`NewRouter`).
+```go
+func NewRouter() http.Handler {
+    // 1. Init Database
+    database, _ := db.NewMongo()
+    
+    // 2. Init Layers
+    userRepo := repository.NewUserRepository(database)
+    authService := auth.NewService(userRepo)
+    
+    // 3. Inject Service into Handlers
+    mux := http.NewServeMux()
+    mux.HandleFunc("/api/login", LoginHandler(authService))
+    
+    return mux
+}
+```
+
+#### 2. The Service Layer (`internal/auth/service.go`)
+Business logic lives here, isolated from HTTP details. It defines an interface `UserStore` for its dependencies.
+```go
+type UserStore interface {
+    FindByEmail(context.Context, string) (*model.User, error)
+}
+
+type Service struct {
+    users UserStore
+}
+
+func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+    // Pure business logic: Find user -> Check password -> Generate Token
+    user, err := s.users.FindByEmail(ctx, email)
+    // ...
+}
+```
+
+#### 3. Higher-Order Handlers (`internal/http/handlers.go`)
+Handlers are closures that "close over" the service dependency.
+```go
+func LoginHandler(service *auth.Service) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        // ... parse request ...
+        token, err := service.Login(r.Context(), email, password)
+        // ... send response ...
+    }
+}
+```
+
+#### 4. Detailed Middleware (`internal/http/middleware.go`)
+The middleware remains responsible only for the transport layer (checking cookies).
 ```go
 func AuthMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // 1. Check Cookie
         cookie, err := r.Cookie("token")
         if err != nil {
-            http.Redirect(w, r, "/login", http.StatusFound)
-            return
+             // ... redirect ...
+             return
         }
-        // 2. Validate JWT
-        if err := auth.VerifyToken(cookie.Value); err != nil {
-            http.Redirect(w, r, "/login", http.StatusFound)
-            return
-        }
-        // 3. Pass to next handler
+        // ... verify token ...
         next.ServeHTTP(w, r)
     })
 }
 ```
 
-#### 2. Project Composition (`internal/app/app.go`)
-We avoid "Magic" globals. The `NewServer` function composes the application by wiring the router to the server.
-```go
-func NewServer() *http.Server {
-    router := internalhttp.NewRouter()
-    return &http.Server{
-        Addr:    ":8080",
-        Handler: router,
-    }
-}
-```
-
-#### 3. Serving Static Files
-Go acts as the web server, serving raw HTML from the `web/` directory directly.
-```go
-http.ServeFile(w, r, "web/signup.html")
-```
-This eliminates the need for a separate Nginx or Node.js server for simple apps.
-
 ### How to Run
 ```bash
 cd miniauth
+# Ensure MongoDB is running on localhost:27017
 go mod tidy
 go run cmd/server/main.go
 ```
