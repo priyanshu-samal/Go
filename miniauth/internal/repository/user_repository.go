@@ -9,18 +9,18 @@ import (
 )
 
 type UserRepository struct {
-	collection *mongo.Collection
+	col *mongo.Collection
 }
 
 func NewUserRepository(db *mongo.Database) *UserRepository {
 	return &UserRepository{
-		collection: db.Collection("users"),
+		col: db.Collection("users"),
 	}
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := r.col.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +28,6 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
-	_, err := r.collection.InsertOne(ctx, user)
+	_, err := r.col.InsertOne(ctx, user)
 	return err
 }

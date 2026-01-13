@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/priyanshu-samal/miniauth/internal/auth"
-
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {
@@ -15,8 +14,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		_, err = auth.VerifyToken(cookie.Value)
-		if err != nil {
+		if err := auth.VerifyToken(cookie.Value); err != nil {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}

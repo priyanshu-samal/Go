@@ -15,8 +15,13 @@ func NewRouter() http.Handler {
 	userRepo := repository.NewUserRepository(database)
 	authService := auth.NewService(userRepo)
 
-	mux.HandleFunc("/signup", SignupHandler(authService))
-	mux.HandleFunc("/login", LoginHandler(authService))
+	mux.HandleFunc("/signup", SignupPage)
+	mux.HandleFunc("/login", LoginPage)
+
+	mux.HandleFunc("/api/signup", SignupHandler(authService))
+	mux.HandleFunc("/api/login", LoginHandler(authService))
+
+	mux.Handle("/dashboard", AuthMiddleware(DashboardPage()))
 
 	return mux
 }

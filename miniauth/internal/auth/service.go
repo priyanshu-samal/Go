@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/priyanshu-samal/miniauth/internal/model"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserStore interface {
@@ -27,31 +26,28 @@ func (s *Service) Signup(ctx context.Context, email, password string) error {
 		return errors.New("user already exists")
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	hash, err := HashPassword(password)
 	if err != nil {
 		return err
 	}
 
 	user := &model.User{
 		Email:    email,
-		Password: string(hash),
+		Password: hash,
 	}
 
 	return s.users.Create(ctx, user)
 }
 
-func (s *Service) Login(ctx context.Context, email, password string) error {
+func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := s.users.FindByEmail(ctx, email)
 	if err != nil {
-		return errors.New("invalid credentials")
+		return "", errors.New("invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword(
-		[]byte(user.Password),
-		[]byte(password),
-	); err != nil {
-		return errors.New("invalid credentials")
+	if err := CheckPassword(user.Password, password); err != nil {
+		return "", errors.New("invalid credentials")
 	}
 
-	return nil
+	return GenerateToken(email)
 }
