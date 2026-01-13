@@ -15,7 +15,7 @@ func main() {
 	server := app.NewServer()
 
 	go func() {
-		log.Println("server started on :8080")
+		log.Println("server running on :8080")
 		if err := server.ListenAndServe(); err != nil {
 			log.Println(err)
 		}
@@ -24,8 +24,6 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-
-	log.Println("shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

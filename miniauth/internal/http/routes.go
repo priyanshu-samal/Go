@@ -1,18 +1,22 @@
 package http
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/priyanshu-samal/miniauth/internal/auth"
+	"github.com/priyanshu-samal/miniauth/internal/db"
+	"github.com/priyanshu-samal/miniauth/internal/repository"
+)
 
 func NewRouter() http.Handler {
 	mux := http.NewServeMux()
 
-	// frontend pages
-	mux.HandleFunc("/signup", SignupPage)
-	mux.HandleFunc("/login", LoginPage)
-	mux.Handle("/dashboard", AuthMiddleware(DashboardPage()))
+	database, _ := db.NewMongo()
+	userRepo := repository.NewUserRepository(database)
+	authService := auth.NewService(userRepo)
 
-	// API
-	mux.HandleFunc("/api/signup", SignupHandler)
-	mux.HandleFunc("/api/login", LoginHandler)
+	mux.HandleFunc("/signup", SignupHandler(authService))
+	mux.HandleFunc("/login", LoginHandler(authService))
 
 	return mux
 }
