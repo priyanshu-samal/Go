@@ -2,16 +2,15 @@ package main
 
 import "fmt"
 
-type Para struct {
-	l, b int
+type mul struct {
+	x, y int
 }
 
-func (p Para) parameter() int {
-	return 2 * (p.l + p.b)
+func (m mul) krunga() int {
+	return m.x * m.y
 }
 
 func main() {
-	v := Para{20, 30}
-	fmt.Println(v.parameter())
-
+	val := mul{20, 30}
+	fmt.Println(val.krunga())
 }
