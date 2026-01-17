@@ -10,7 +10,9 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
 *   [**Chapter 4: CRUD API**](./CRUD) - RESTful API with `gorilla/mux`.
 *   [**Chapter 5: Standard Project Structure**](./student) - Graceful shutdown, `slog`, and folder layout.
-*   [**Chapter 6: MiniAuth**](./miniauth) - JWT Authentication from scratch.
+*   [**Chapter 6: MiniAuth**](./miniauth) - Production-grade Authentication with Service/Repo pattern.
+*   [**Chapter 7: Methods**](./Methods) - Value vs Pointer Receivers (`billing` example).
+*   [**Chapter 8: Attendance App**](./attendence) - (WIP) Project Skeleton.
 
 ---
 
@@ -509,6 +511,47 @@ go run cmd/server/main.go
 *   Log in to access the protected dashboard.
 
 ---
+
+## Chapter 7: Methods
+
+### Overview
+This directory (`Methods/`) contains exercises focusing on **Structs** and **Methods**, specifically the difference between **Value Receivers** and **Pointer Receivers**.
+
+### Key Concept: Value vs Pointer Receiver
+
+**1. Value Receiver (`task1`)**
+```go
+func (s side) area() int { ... }
+```
+*   Variables are **copied**.
+*   Changes inside the function **do not** affect the original variable.
+*   Use for: Small structs, read-only access.
+
+**2. Pointer Receiver (`billing`)**
+```go
+func (a *Account) deposit(money int) {
+    a.balance += money
+}
+```
+*   Passes a **reference** to the original struct.
+*   Changes **persist**.
+*   Use for: Modifying state (`balance`), large structs (avoids copying).
+
+---
+
+## Chapter 8: Attendance App
+
+### Overview
+The `attendence` directory is a **work-in-progress** skeleton for a new application.
+It follows the standard layout with `cmd`, `internal`, and `web` directories, but the implementation is currently empty (`main()` is blank).
+
+**Planned Structure:**
+*   `internal/auth`: Authentication logic
+*   `internal/db`: Database connection
+*   `internal/model`: Data structures
+
+---
 *Happy Coding!*
+
 
 
