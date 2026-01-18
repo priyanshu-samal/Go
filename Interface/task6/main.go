@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+//Interfaces let you change WHAT you use without changing WHERE you use it.
 
 type Describer interface {
 	Describe() string
