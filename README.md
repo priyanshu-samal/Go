@@ -13,6 +13,7 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 *   [**Chapter 6: MiniAuth**](./miniauth) - Production-grade Authentication with Service/Repo pattern.
 *   [**Chapter 7: Methods**](./Methods) - Value vs Pointer Receivers (`billing` example).
 *   [**Chapter 8: Attendance App**](./attendence) - (WIP) Project Skeleton.
+*   [**Chapter 9: Interfaces**](./Interface) - Polymorphism and Dependency Injection.
 
 ---
 
@@ -515,28 +516,37 @@ go run cmd/server/main.go
 ## Chapter 7: Methods
 
 ### Overview
-This directory (`Methods/`) contains exercises focusing on **Structs** and **Methods**, specifically the difference between **Value Receivers** and **Pointer Receivers**.
+This directory (`Methods/`) contains a series of exercises designed to master **Structs** and **Methods**. Each subfolder tackles a specific nuance of how methods work in Go, particularly the difference between **Value Receivers** and **Pointer Receivers**.
 
-### Key Concept: Value vs Pointer Receiver
+### Sub-Topics & Learning Goals
 
-**1. Value Receiver (`task1`)**
-```go
-func (s side) area() int { ... }
-```
-*   Variables are **copied**.
-*   Changes inside the function **do not** affect the original variable.
-*   Use for: Small structs, read-only access.
+#### 1. Mutation & State (`billing`, `hit`)
+*   **`billing/`**: Demonatrates a **Bank Account** where `deposit()` must modify the balance.
+    *   *Why?* To prove that you MUST use a **Pointer Receiver** (`*Account`) to persist changes. If you used a value receiver, the money would disappear after the function ends!
+*   **`hit/`**: Implements a "Request Counter" that increments on every hit.
+    *   *Why?* To show state mutation over time.
 
-**2. Pointer Receiver (`billing`)**
-```go
-func (a *Account) deposit(money int) {
-    a.balance += money
-}
-```
-*   Passes a **reference** to the original struct.
-*   Changes **persist**.
-*   Use for: Modifying state (`balance`), large structs (avoids copying).
+#### 2. Getters & Setters (`feature`)
+*   **`feature/`**: A "Feature Flag" toggle.
+    *   `enable()`: Pointer receiver (writes state).
+    *   `isEnabled()`: Value receiver (reads state).
+    *   *Why?* To differentiate between "Writing" (needs pointer) and "Reading" (can use value, strictly safe).
 
+#### 3. Command-Query Separation (`task5`)
+*   **`task5/`**: Separates `scale()` (Command/Action) from `abs()` (Query/Calculation).
+    *   *Why?* To advocate for clean API design where methods either *do something* OR *return something*, but rarely both.
+
+#### 4. Methods vs Functions (`task3`, `task4`)
+*   **`task3/`**: Comparing `v.Scale()` vs `ScaleFunc(&v)`.
+    *   *Why?* To show Go's "syntactic sugar": `v.Scale()` works whether `v` is a value or a pointer (Go handles it). Functions don't—you mustmatch types exactly.
+
+#### 5. Encapsulation (`task6`)
+*   **`task6/`**: A simple Counter wrapper.
+    *   *Why?* To show how methods bundle data (`value`) and behavior (`inc`, `add`) together.
+
+#### 6. Value vs Pointer Basics (`task1`, `task2`)
+*   **`task1/`**: Value Receiver example (Copying).
+*   **`task2/`**: Pointer Receiver example (Mutating).
 ---
 
 ## Chapter 8: Attendance App
@@ -551,7 +561,38 @@ It follows the standard layout with `cmd`, `internal`, and `web` directories, bu
 *   `internal/model`: Data structures
 
 ---
+
+## Chapter 9: Interfaces
+
+### Overview
+This directory (`Interface/`) explores Go's most powerful feature: **Interfaces**. Unlike Java or C#, Go interfaces are satisfied **implicitly**—we don't say `implements Notifier`.
+
+### Sub-Topics & Learning Goals
+
+#### 1. The Basics (`area`, `task1`, `task3`)
+*   **`area/`**: Defines a `Shape` interface with `Area()`.
+    *   *Why?* To show how `Square` and `Circle` can basically be treated as the same type (`Shape`) because they both have an `Area()` method.
+*   **`task3/`**: `Speaker` interface.
+    *   *Why?* Basic polymorphism: `Human` satisfies `Speaker` because it has a `Speak()` method.
+
+#### 2. Polymorphism in Action (`logger`, `task6`, `task8`)
+*   **`logger/`**: `ConsoleLogger` vs `FileLogger`.
+    *   *Why?* To demonstrate how to swap implementations without changing the calling code (`doWork`). This is essential for testing (mocking).
+*   **`task6/`**, **`task7/`**: `Describer` interface (`Book` vs `Movie`).
+    *   *Why?* Shows that if you have a method `Describe()`, you CAN be passed to `tellMe()`.
+*   **`task8/`**: `DataSource` (`FileSource` vs `NetworkSource`).
+    *   *Why?* Real-world scenario: reading data doesn't care *where* it comes from, only that it can be read.
+
+#### 3. Dependency Injection (`task2`, `task5`)
+*   **`task2/`**: `send(n Notifier)`.
+    *   *Why?* The function explicitly says: "I don't know what you are, but I know you can `Notify`". This allows us to pass Email, SMS, or PushNotifications without changing the `send` function.
+*   **`task5/`**: **The 4-Step Guide**.
+    1.  Define Behavior (`interface`).
+    2.  Create Concrete (`Email`).
+    3.  Create Another Concrete (`SMS`).
+    4.  Write Logic dependent on Interface, not Concrete.
+    *   *Why?* This is the blueprint for writing Clean Architecture in Go.
+
+---
 *Happy Coding!*
-
-
 
