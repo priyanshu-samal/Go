@@ -10,7 +10,7 @@ func numbers(ch chan bool) {
 		time.Sleep(100*time.Millisecond)
 		fmt.Println(i)
 	}
-	ch<- true
+	ch<- true//send
 }
 
 func character(ch chan bool){
@@ -25,7 +25,7 @@ func main() {
      ch:=make(chan bool, 1)
 	 go numbers(ch)
 	 go character(ch)
-	 <-ch
+	 <-ch//recieve
 	 <-ch
 
 }
