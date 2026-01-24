@@ -3,8 +3,8 @@ package main
 import "fmt"
 
 type Queue struct {
-	rear  int
 	front int
+	rear  int
 	size  int
 	data  []int
 }
@@ -18,50 +18,48 @@ func NewQueue(size int) *Queue {
 	}
 }
 
-func (q *Queue) enque(x int) bool {
+func (q *Queue) Enqueue(x int) bool {
 	if q.rear == q.size-1 {
-		return false
+		return false // queue full
 	}
+
 	if q.front == -1 {
 		q.front = 0
-		q.rear = 0
-		q.data[q.rear] = x
-		q.rear++
-		return true
 	}
-	q.rear = x
+
 	q.rear++
+	q.data[q.rear] = x
 	return true
 }
 
-func (q *Queue) deque() (int, bool) {
-	if q.rear == -1 {
-		return 0, false
+func (q *Queue) Dequeue() (int, bool) {
+	if q.front == -1 {
+		return 0, false // queue empty
 	}
-	if q.front == q.size-1 {
-		x := q.data[q.front]
-		q.front = -1
-		q.rear = -1
-		return x, true
-	}
-	if q.front == q.rear {
-		x := q.data[q.front]
-		q.front = -1
-		q.rear = -1
-		return x, true
-	}
+
 	x := q.data[q.front]
-	q.front++
+
+	if q.front == q.rear {
+		q.front = -1
+		q.rear = -1
+	} else {
+		q.front++
+	}
+
 	return x, true
 }
 
 func main() {
 	q := NewQueue(5)
-	q.enque(10)
-	q.enque(13)
-	q.enque(11)
-	q.enque(18)
-	fmt.Println(q.deque())
-	q.enque(11)
+
+	q.Enqueue(10)
+	q.Enqueue(13)
+	q.Enqueue(11)
+	q.Enqueue(18)
+
+	fmt.Println(q.Dequeue()) // 10
+
+	q.Enqueue(99) // still fails after rear hits end
+
 	fmt.Println(q.data)
 }
