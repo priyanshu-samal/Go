@@ -38,6 +38,6 @@ func (s *Stack) Pop() (int, bool) {
 func main() {
 	v:=NewStack(10)
 	fmt.Println(v.Push(10))
-	fmt.Println(v)
+	fmt.Println(v.data)
 
 }
