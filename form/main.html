@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thought of the Day</title>
+</head>
+<body>
+
+    <h2>Thought of the Day</h2>
+
+    <form action="/submit" method="POST">
+        
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <label for="thought">Thought of the Day:</label><br>
+        <textarea id="thought" name="thought" rows="4" cols="40" required></textarea><br><br>
+
+        <button type="submit">Submit</button>
+
+    </form>
+
+</body>
+</html>
