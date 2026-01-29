@@ -6,14 +6,16 @@ Welcome to my Go programming repository. This "book" documents my journey of lea
 
 *   [**Chapter 0: Intro**](./Intro) - Standard project structure, modules, and packages.
 *   [**Chapter 1: The Runtime**](#chapter-1-the-runtime) - Deep dive into Stack vs Heap, GC, sync.Pool, and Profiling.
-*   [**Chapter 2: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
-*   [**Chapter 3: Concurrency**](./concurrency) - Goroutines, Channels, and the Worker Pool pattern.
-*   [**Chapter 4: CRUD API**](./CRUD) - RESTful API with `gorilla/mux`.
-*   [**Chapter 5: Standard Project Structure**](./student) - Graceful shutdown, `slog`, and folder layout.
-*   [**Chapter 6: MiniAuth**](./miniauth) - Production-grade Authentication with Service/Repo pattern.
-*   [**Chapter 7: Methods**](./Methods) - Value vs Pointer Receivers (`billing` example).
-*   [**Chapter 8: Attendance App**](./attendence) - (WIP) Project Skeleton.
-*   [**Chapter 9: Interfaces**](./Interface) - Polymorphism and Dependency Injection.
+*   [**Chapter 2: Methods**](./Methods) - Value vs Pointer Receivers (Core Logic).
+*   [**Chapter 3: Interfaces**](./Interface) - Polymorphism and Dependency Injection.
+*   [**Chapter 4: Generics**](./Generics) - Type constraints and reusable code.
+*   [**Chapter 5: Error Handling**](./errorhandling) - Errors as values, Sentinel errors vs Custom structs.
+*   [**Chapter 6: Concurrency**](./concurrency) - Goroutines, Channels, and Patterns.
+*   [**Chapter 7: Data Structures**](#chapter-7-data-structures) - Stack, Queue, and basic algorithms.
+*   [**Chapter 8: Standard Library**](./net) - Networking and `slog`.
+*   [**Chapter 9: Web Basics**](./CRUD) - REST API, Forms (`form`, `form2`), and JSON.
+*   [**Chapter 10: Advanced Web**](./miniauth) - Auth, Middleware, and Graceful Shutdown (`student`).
+*   [**Chapter 11: Projects**](./attendence) - Real-world applications (`attendence`, `raylib`).
 
 ---
 
@@ -152,7 +154,96 @@ Go is constantly trying to keep things simple, fast, and safe:
 
 ---
 
-## Chapter 2: Error Handling
+## Chapter 2: Methods
+
+### Overview
+This directory (`Methods/`) contains a series of exercises designed to master **Structs** and **Methods**. Each subfolder tackles a specific nuance of how methods work in Go, particularly the difference between **Value Receivers** and **Pointer Receivers**.
+
+### Sub-Topics & Learning Goals
+
+#### 1. Mutation & State (`billing`, `hit`)
+*   **`billing/`**: Demonatrates a **Bank Account** where `deposit()` must modify the balance.
+    *   *Why?* To prove that you MUST use a **Pointer Receiver** (`*Account`) to persist changes. If you used a value receiver, the money would disappear after the function ends!
+*   **`hit/`**: Implements a "Request Counter" that increments on every hit.
+    *   *Why?* To show state mutation over time.
+
+#### 2. Getters & Setters (`feature`)
+*   **`feature/`**: A "Feature Flag" toggle.
+    *   `enable()`: Pointer receiver (writes state).
+    *   `isEnabled()`: Value receiver (reads state).
+    *   *Why?* To differentiate between "Writing" (needs pointer) and "Reading" (can use value, strictly safe).
+
+#### 3. Command-Query Separation (`task5`)
+*   **`task5/`**: Separates `scale()` (Command/Action) from `abs()` (Query/Calculation).
+    *   *Why?* To advocate for clean API design where methods either *do something* OR *return something*, but rarely both.
+
+#### 4. Methods vs Functions (`task3`, `task4`)
+*   **`task3/`**: Comparing `v.Scale()` vs `ScaleFunc(&v)`.
+    *   *Why?* To show Go's "syntactic sugar": `v.Scale()` works whether `v` is a value or a pointer (Go handles it). Functions don't—you mustmatch types exactly.
+
+#### 5. Encapsulation (`task6`)
+*   **`task6/`**: A simple Counter wrapper.
+    *   *Why?* To show how methods bundle data (`value`) and behavior (`inc`, `add`) together.
+
+#### 6. Value vs Pointer Basics (`task1`, `task2`)
+*   **`task1/`**: Value Receiver example (Copying).
+*   **`task2/`**: Pointer Receiver example (Mutating).
+
+---
+
+## Chapter 3: Interfaces
+
+### Overview
+This directory (`Interface/`) explores Go's most powerful feature: **Interfaces**. Unlike Java or C#, Go interfaces are satisfied **implicitly**—we don't say `implements Notifier`.
+
+### Sub-Topics & Learning Goals
+
+#### 1. The Basics (`area`, `task1`, `task3`)
+*   **`area/`**: Defines a `Shape` interface with `Area()`.
+    *   *Why?* To show how `Square` and `Circle` can basically be treated as the same type (`Shape`) because they both have an `Area()` method.
+*   **`task3/`**: `Speaker` interface.
+    *   *Why?* Basic polymorphism: `Human` satisfies `Speaker` because it has a `Speak()` method.
+
+#### 2. Polymorphism in Action (`logger`, `task6`, `task8`)
+*   **`logger/`**: `ConsoleLogger` vs `FileLogger`.
+    *   *Why?* To demonstrate how to swap implementations without changing the calling code (`doWork`). This is essential for testing (mocking).
+*   **`task6/`**, **`task7/`**: `Describer` interface (`Book` vs `Movie`).
+    *   *Why?* Shows that if you have a method `Describe()`, you CAN be passed to `tellMe()`.
+*   **`task8/`**: `DataSource` (`FileSource` vs `NetworkSource`).
+    *   *Why?* Real-world scenario: reading data doesn't care *where* it comes from, only that it can be read.
+
+#### 3. Dependency Injection (`task2`, `task5`)
+*   **`task2/`**: `send(n Notifier)`.
+    *   *Why?* The function explicitly says: "I don't know what you are, but I know you can `Notify`". This allows us to pass Email, SMS, or PushNotifications without changing the `send` function.
+*   **`task5/`**: **The 4-Step Guide**.
+    1.  Define Behavior (`interface`).
+    2.  Create Concrete (`Email`).
+    3.  Create Another Concrete (`SMS`).
+    4.  Write Logic dependent on Interface, not Concrete.
+    *   *Why?* This is the blueprint for writing Clean Architecture in Go.
+
+---
+
+## Chapter 4: Generics
+
+### Overview
+Go 1.18 introduced Generics, allowing functions and types to work with **any** set of types. This reduces code duplication.
+
+### Key Concept: Type Constraints (`[T any]`)
+
+**1. Generic Functions (`Generics/task1`)**
+```go
+func Print[T any](v T) {
+    fmt.Println(v)
+}
+```
+*   **`[T any]`**: Defines a type parameter `T` that can be *anything*.
+*   **Usage**: You can call `Print(10)`, `Print("hello")`, or `Print(User{})`.
+*   *Why?* Without generics, you'd need `PrintInt`, `PrintString`, or use `interface{}` (which loses type safety).
+
+---
+
+## Chapter 5: Error Handling
 
 ### Overview
 In many languages (Java, Python, JS), errors are "exceptions" — they crash the program unless you catch them.
@@ -218,7 +309,7 @@ go run main.go
 
 ---
 
-## Chapter 3: Concurrency
+## Chapter 6: Concurrency
 
 ### Overview
 Concurrency is Go's superpower. Unlike OS threads which are heavy (1MB+ stack), Go uses **Goroutines** (2KB stack). A single Go program can easily run tens of thousands of concurrent tasks.
@@ -280,14 +371,36 @@ If we waited in the main thread *before* reading the results, the program might 
 
 ---
 
-## Chapter 4: CRUD API
+## Chapter 7: Data Structures
 
 ### Overview
-This project builds a fully functional **RESTful API** for managing a collection of Movies. It uses the external library **Gorilla Mux** for robust routing, which offers more features than the standard `net/http` ServeMux (like parameters extraction).
+Understanding how to build basic data structures from scratch is crucial for understanding how memory works.
+
+### 1. Stack (LIFO)
+Located in `stack/`, implemented using slices.
+*   **Push**: Append to slice.
+*   **Pop**: Return last element, shrink slice.
+*   *Key Detail*: Tracks `top` index manually.
+
+### 2. Queue (FIFO)
+Located in `queue/`.
+*   **Enqueue**: Add to `rear`.
+*   **Dequeue**: Remove from `front`.
+*   *Key Detail*: The provided implementation is a "Linear Queue". Once `rear` hits the limit, it cannot accept new items even if space exists at the front! (Solution: Circular Queue).
+
+---
+
+## Chapter 8: Standard Library (Work In Progress)
+This chapter will cover packages like `net` (Networking) and `log/slog` (Structured Logging), which you will see used in the Web chapters.
+
+---
+
+## Chapter 9: Web Basics
+
+### Overview
+This project builds a fully functional **RESTful API** for managing a collection of Movies. It uses the external library **Gorilla Mux** for robust routing.
 
 ### Data Model
-We use a simple in-memory slice to store data.
-
 ```go
 type Movie struct{
     ID       string    `json:"id"`
@@ -295,17 +408,11 @@ type Movie struct{
     Title    string    `json:"title"`
     Director *Director `json:"director"`
 }
-
-type Director struct{
-    Firstname string `json:"firstname"`
-    Lastname  string `json:"lastname"`
-}
 ```
 > [!NOTE]
-> In Go, fields must be **Exported** (Capitalized) to be visible to the `encoding/json` package. If you name them `firstname` (lowercase), they will be ignored in the JSON output!
+> In Go, fields must be **Exported** (Capitalized) to be visible to the `encoding/json` package.
 
 ### Design: REST Endpoints
-
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | **GET** | `/movies` | Get all movies |
@@ -317,14 +424,14 @@ type Director struct{
 ### Code Walkthrough (`CRUD/main.go`)
 
 **1. The Router (`gorilla/mux`)**
-Unlike standard Http, Mux allows dynamic variables in URLs:
+Mux allows dynamic variables in URLs:
 ```go
 r := mux.NewRouter()
 r.HandleFunc("/movies/{id}", getMovie).Methods("GET")
 ```
 
 **2. Handling Request Body (POST/PUT)**
-We use `json.NewDecoder` to read data directly from the input stream into our struct.
+We use `json.NewDecoder`.
 ```go
 var movie Movie
 _ = json.NewDecoder(r.Body).Decode(&movie)
@@ -341,22 +448,21 @@ id := params["id"]
 ### How to Run
 ```bash
 cd CRUD
-go mod tidy  # Install dependencies
+go mod tidy
 go run main.go
 ```
 *   Server listens on `http://localhost:8000`.
-*   Use Postman or `curl` to test the API.
 
 ---
 
-## Chapter 5: Standard Project Structure
+## Chapter 10: Advanced Web
 
-### Overview
-This project (`student/`) demonstrates how to structure a production-ready Go application. It moves away from "everything in main" to a modular design and implements **Graceful Shutdown** to ensure no requests are dropped when the server stops.
+### Part 1: Standard Structure (`student/`)
 
-### 1. The Layout
-We follow the unofficial standard Go project layout:
+#### Overview
+This project demonstrates how to structure a production-ready application and implements **Graceful Shutdown**.
 
+#### The Layout
 ```text
 student/
 ├── cmd/
@@ -369,59 +475,18 @@ student/
 └── .gitignore           # Git ignore rules
 ```
 
-*   **`cmd/`**: Main applications. You might have `cmd/server` and `cmd/cli`.
-*   **`internal/`**: Code that libraries cannot import. This enforces that your app's business logic stays private.
-
-### 2. Graceful Shutdown
-In production, you never want to `kill -9` a server. You want to stop receiving new requests, finish the current ones, and *then* exit.
-
-**The Implementation (`cmd/student/main.go`)**
-
-1.  **Start Background Server**:
-    We run `ListenAndServe` in a goroutine so it doesn't block the main thread.
-    ```go
-    go startServer(server)
-    ```
-
-2.  **Listen for OS Signals**:
-    We block until we get a termination signal (like Ctrl+C or Docker stopping).
-    ```go
-    shutdown := make(chan os.Signal, 1)
-    signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-    <-shutdown // Block here until signal received
-    ```
-
-3.  **Timeout Context**:
-    We give the server 5 seconds to finish active requests. If it takes longer, we force kill it.
-    ```go
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
-    server.Shutdown(ctx)
-    ```
-
-### 3. Structured Logging (`log/slog`)
+#### Structured Logging (`log/slog`)
 We use Go's new built-in structured logger.
 ```go
 slog.Info("HTTP server starting", slog.String("addr", server.Addr))
 ```
-This outputs JSON logs (e.g., `{"time":"...", "level":"INFO", "msg":"...", "addr":":8080"}`), which are machine-readable and perfect for tools like Datadog or Grafana.
 
----
+### Part 2: Authentication (`miniauth/`)
 
-## Chapter 6: MiniAuth
+#### Overview
+**MiniAuth** demonstrates **JWT Authentication** and **Clean Architecture** (Service/Repo pattern) with MongoDB.
 
-### Overview
-**MiniAuth** is a monolithic Go server that demonstrates **production-grade authentication** flow.
-Unlike simple tutorials, this project implements **Clean Architecture** (Service/Repository pattern) and connects to a real **MongoDB** database.
-
-**Key Features:**
-*   **Clean Architecture**: Separation of concerns (Handler → Service → Repository → DB).
-*   **Dependency Injection**: Dependencies are passed explicitly, making the code testable and clear.
-*   **JWT Sessions**: Stateless authentication stored in HTTP-only cookies.
-*   **MongoDB**: Persistent user storage using `mongo-driver`.
-
-### Architecture Layers
-
+#### Architecture Layers
 ```mermaid
 graph TD
     Router[Router] -->|Injects Service| Handler[HTTP Handlers]
@@ -434,165 +499,34 @@ graph TD
     style Repo fill:#e0f2f1,stroke:#00695c
 ```
 
-### Code Walkthrough
-
-#### 1. Wiring Dependencies (`internal/http/routes.go`)
-We avoid global state by wiring our application in the composition root (`NewRouter`).
+#### Code Walkthrough
+**1. Dependecy Injection (`internal/http/routes.go`)**
 ```go
-func NewRouter() http.Handler {
-    // 1. Init Database
-    database, _ := db.NewMongo()
-    
-    // 2. Init Layers
-    userRepo := repository.NewUserRepository(database)
-    authService := auth.NewService(userRepo)
-    
-    // 3. Inject Service into Handlers
-    mux := http.NewServeMux()
-    mux.HandleFunc("/api/login", LoginHandler(authService))
-    
-    return mux
-}
+userRepo := repository.NewUserRepository(database)
+authService := auth.NewService(userRepo)
+mux.HandleFunc("/api/login", LoginHandler(authService))
 ```
 
-#### 2. The Service Layer (`internal/auth/service.go`)
-Business logic lives here, isolated from HTTP details. It defines an interface `UserStore` for its dependencies.
+**2. The Service Layer (`internal/auth/service.go`)**
+Business logic depends on interfaces (`UserStore`), not concrete types.
 ```go
-type UserStore interface {
-    FindByEmail(context.Context, string) (*model.User, error)
-}
-
 type Service struct {
     users UserStore
 }
-
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
-    // Pure business logic: Find user -> Check password -> Generate Token
-    user, err := s.users.FindByEmail(ctx, email)
-    // ...
-}
+func (s *Service) Login(...) {...}
 ```
-
-#### 3. Higher-Order Handlers (`internal/http/handlers.go`)
-Handlers are closures that "close over" the service dependency.
-```go
-func LoginHandler(service *auth.Service) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        // ... parse request ...
-        token, err := service.Login(r.Context(), email, password)
-        // ... send response ...
-    }
-}
-```
-
-#### 4. Detailed Middleware (`internal/http/middleware.go`)
-The middleware remains responsible only for the transport layer (checking cookies).
-```go
-func AuthMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        cookie, err := r.Cookie("token")
-        if err != nil {
-             // ... redirect ...
-             return
-        }
-        // ... verify token ...
-        next.ServeHTTP(w, r)
-    })
-}
-```
-
-### How to Run
-```bash
-cd miniauth
-# Ensure MongoDB is running on localhost:27017
-go mod tidy
-go run cmd/server/main.go
-```
-*   Visit `http://localhost:8080/signup` to create a user.
-*   Log in to access the protected dashboard.
 
 ---
 
-## Chapter 7: Methods
+## Chapter 11: Projects
 
 ### Overview
-This directory (`Methods/`) contains a series of exercises designed to master **Structs** and **Methods**. Each subfolder tackles a specific nuance of how methods work in Go, particularly the difference between **Value Receivers** and **Pointer Receivers**.
+This section tracks real-world applications.
 
-### Sub-Topics & Learning Goals
-
-#### 1. Mutation & State (`billing`, `hit`)
-*   **`billing/`**: Demonatrates a **Bank Account** where `deposit()` must modify the balance.
-    *   *Why?* To prove that you MUST use a **Pointer Receiver** (`*Account`) to persist changes. If you used a value receiver, the money would disappear after the function ends!
-*   **`hit/`**: Implements a "Request Counter" that increments on every hit.
-    *   *Why?* To show state mutation over time.
-
-#### 2. Getters & Setters (`feature`)
-*   **`feature/`**: A "Feature Flag" toggle.
-    *   `enable()`: Pointer receiver (writes state).
-    *   `isEnabled()`: Value receiver (reads state).
-    *   *Why?* To differentiate between "Writing" (needs pointer) and "Reading" (can use value, strictly safe).
-
-#### 3. Command-Query Separation (`task5`)
-*   **`task5/`**: Separates `scale()` (Command/Action) from `abs()` (Query/Calculation).
-    *   *Why?* To advocate for clean API design where methods either *do something* OR *return something*, but rarely both.
-
-#### 4. Methods vs Functions (`task3`, `task4`)
-*   **`task3/`**: Comparing `v.Scale()` vs `ScaleFunc(&v)`.
-    *   *Why?* To show Go's "syntactic sugar": `v.Scale()` works whether `v` is a value or a pointer (Go handles it). Functions don't—you mustmatch types exactly.
-
-#### 5. Encapsulation (`task6`)
-*   **`task6/`**: A simple Counter wrapper.
-    *   *Why?* To show how methods bundle data (`value`) and behavior (`inc`, `add`) together.
-
-#### 6. Value vs Pointer Basics (`task1`, `task2`)
-*   **`task1/`**: Value Receiver example (Copying).
-*   **`task2/`**: Pointer Receiver example (Mutating).
----
-
-## Chapter 8: Attendance App
-
-### Overview
-The `attendence` directory is a **work-in-progress** skeleton for a new application.
-It follows the standard layout with `cmd`, `internal`, and `web` directories, but the implementation is currently empty (`main()` is blank).
-
-**Planned Structure:**
+### 1. Attendance App
+The `attendence` directory is a **work-in-progress** skeleton.
 *   `internal/auth`: Authentication logic
 *   `internal/db`: Database connection
-*   `internal/model`: Data structures
-
----
-
-## Chapter 9: Interfaces
-
-### Overview
-This directory (`Interface/`) explores Go's most powerful feature: **Interfaces**. Unlike Java or C#, Go interfaces are satisfied **implicitly**—we don't say `implements Notifier`.
-
-### Sub-Topics & Learning Goals
-
-#### 1. The Basics (`area`, `task1`, `task3`)
-*   **`area/`**: Defines a `Shape` interface with `Area()`.
-    *   *Why?* To show how `Square` and `Circle` can basically be treated as the same type (`Shape`) because they both have an `Area()` method.
-*   **`task3/`**: `Speaker` interface.
-    *   *Why?* Basic polymorphism: `Human` satisfies `Speaker` because it has a `Speak()` method.
-
-#### 2. Polymorphism in Action (`logger`, `task6`, `task8`)
-*   **`logger/`**: `ConsoleLogger` vs `FileLogger`.
-    *   *Why?* To demonstrate how to swap implementations without changing the calling code (`doWork`). This is essential for testing (mocking).
-*   **`task6/`**, **`task7/`**: `Describer` interface (`Book` vs `Movie`).
-    *   *Why?* Shows that if you have a method `Describe()`, you CAN be passed to `tellMe()`.
-*   **`task8/`**: `DataSource` (`FileSource` vs `NetworkSource`).
-    *   *Why?* Real-world scenario: reading data doesn't care *where* it comes from, only that it can be read.
-
-#### 3. Dependency Injection (`task2`, `task5`)
-*   **`task2/`**: `send(n Notifier)`.
-    *   *Why?* The function explicitly says: "I don't know what you are, but I know you can `Notify`". This allows us to pass Email, SMS, or PushNotifications without changing the `send` function.
-*   **`task5/`**: **The 4-Step Guide**.
-    1.  Define Behavior (`interface`).
-    2.  Create Concrete (`Email`).
-    3.  Create Another Concrete (`SMS`).
-    4.  Write Logic dependent on Interface, not Concrete.
-    *   *Why?* This is the blueprint for writing Clean Architecture in Go.
 
 ---
 *Happy Coding!*
-
